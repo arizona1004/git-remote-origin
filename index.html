@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simple Pinball Game</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #333 0%, #111 100%);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    #gameCanvas {
+      background: #000;
+      border: 2px solid #fff;
+      border-radius: 8px;
+    }
+
+    .score {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #fff;
+      font-size: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="score" id="score">Score: 0</div>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let score = 0;
+    const scoreEl = document.getElementById('score');
+
+    const ball = {
+      x: canvas.width / 2,
+      y: 50,
+      radius: 8,
+      vx: 2,
+      vy: 3
+    };
+
+    const flipperLeft = {
+      x: 120,
+      y: canvas.height - 40,
+      width: 60,
+      height: 10,
+      angle: 0,
+      pressed: false
+    };
+
+    const flipperRight = {
+      x: canvas.width - 180,
+      y: canvas.height - 40,
+      width: 60,
+      height: 10,
+      angle: 0,
+      pressed: false
+    };
+
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffeb3b';
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawFlipper(flip) {
+      ctx.save();
+      ctx.translate(flip.x + flip.width / 2, flip.y + flip.height / 2);
+      ctx.rotate(flip.angle);
+      ctx.fillStyle = '#03a9f4';
+      ctx.fillRect(-flip.width / 2, -flip.height / 2, flip.width, flip.height);
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBall();
+      drawFlipper(flipperLeft);
+      drawFlipper(flipperRight);
+      update();
+      requestAnimationFrame(draw);
+    }
+
+    function update() {
+      // Ball movement
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // Wall collisions
+      if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) {
+        ball.vx = -ball.vx;
+      }
+      if (ball.y - ball.radius < 0) {
+        ball.vy = -ball.vy;
+      }
+
+      // Bottom reset
+      if (ball.y + ball.radius > canvas.height) {
+        ball.x = canvas.width / 2;
+        ball.y = 50;
+        ball.vy = 3;
+        ball.vx = 2;
+        score = 0;
+        scoreEl.textContent = `Score: ${score}`;
+      }
+
+      // Gravity
+      ball.vy += 0.05;
+
+      // Flipper collisions
+      [flipperLeft, flipperRight].forEach(flip => {
+        const cos = Math.cos(flip.angle);
+        const sin = Math.sin(flip.angle);
+        const relX = ball.x - (flip.x + flip.width / 2);
+        const relY = ball.y - (flip.y + flip.height / 2);
+        const rotatedX = relX * cos + relY * sin;
+        const rotatedY = -relX * sin + relY * cos;
+        const halfW = flip.width / 2;
+        const halfH = flip.height / 2;
+        if (rotatedX > -halfW && rotatedX < halfW && rotatedY > -halfH - ball.radius && rotatedY < halfH) {
+          ball.vy = -Math.abs(ball.vy) - 1;
+          ball.vx += (flip === flipperLeft ? -1 : 1);
+          score++;
+          scoreEl.textContent = `Score: ${score}`;
+        }
+      });
+    }
+
+    function rotateFlippers() {
+      const maxAngle = 0.5;
+      const speed = 0.1;
+      if (flipperLeft.pressed) {
+        flipperLeft.angle = Math.min(flipperLeft.angle + speed, maxAngle);
+      } else {
+        flipperLeft.angle = Math.max(flipperLeft.angle - speed, 0);
+      }
+      if (flipperRight.pressed) {
+        flipperRight.angle = Math.max(flipperRight.angle - speed, -maxAngle);
+      } else {
+        flipperRight.angle = Math.min(flipperRight.angle + speed, 0);
+      }
+      requestAnimationFrame(rotateFlippers);
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'z') flipperLeft.pressed = true;
+      if (e.key === 'm') flipperRight.pressed = true;
+    });
+    document.addEventListener('keyup', e => {
+      if (e.key === 'z') flipperLeft.pressed = false;
+      if (e.key === 'm') flipperRight.pressed = false;
+    });
+
+    draw();
+    rotateFlippers();
+  </script>
+</body>
+</html>
